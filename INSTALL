@@ -1,0 +1,7 @@
+TBParser can be installed by the common python distribution tools.
+Simply enter
+
+    python setup.py install --prefix=<your_installation_directory>
+    
+on the command line in this directory. Use option --help to get more
+information about the available options.

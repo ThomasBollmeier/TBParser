@@ -1,0 +1,6 @@
+include setup.py
+include AUTHORS
+include COPYING
+include INSTALL
+include README
+recursive-include tbparser *.py 
