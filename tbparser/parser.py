@@ -58,9 +58,11 @@ class Parser(object):
                 
                 if found:
                     done = True    
-                elif not self._findNextSibling(path):
-                    error = True
-                    done = True
+                else:
+                    found, path = self._findNextSibling(path)
+                    if not found:
+                        error = True
+                        done = True
 
                 continue
  
@@ -68,9 +70,11 @@ class Parser(object):
             
             if found:
                 self._tokenBuffer.pop()
-            elif not self._findNextSibling(path):
-                done = True
-                error = True
+            else:
+                found, path = self._findNextSibling(path)
+                if not found:
+                    done = True
+                    error = True
         
         if not error:
             return self._createAst(path)
@@ -139,18 +143,20 @@ class Parser(object):
         return current
 
     def _findNextSibling(self, path):
-
+        
+        newPath = path.copy()
+        
         while True:
 
-            if path.getLength() < 2:
-                return False
+            if newPath.getLength() < 2:
+                return False, path
 
-            siblingFound, path = self._gotoNextSibling(path)
+            siblingFound, newPath = self._gotoNextSibling(newPath)
             
             if siblingFound:
-                return True
+                return True, newPath
             else:
-                token = path.popToken()
+                token = newPath.popToken()
                 if token:
                     self._tokenBuffer.append(token)
  
