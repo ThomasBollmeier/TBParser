@@ -104,7 +104,6 @@ class Parser(object):
 
             element = path.getElement(i)
             node = element.getGrammarNode()
-            ttype = element.getMatchedTokenType()
             token = element.getToken()
 
             if node.isRuleStart():
@@ -113,7 +112,7 @@ class Parser(object):
                     stack.append(current)
                 name = node.getName()
                 id_ = node.getId()    
-                text = self._getMatchedText(token, ttype)
+                text = token and token.getText() or ''
                 current = AstNode(name, text, id_)
 
             elif node.isRuleEnd():
@@ -134,7 +133,7 @@ class Parser(object):
             elif node.isTokenNode():
 
                 id_ = node.getId()
-                text = self._getMatchedText(token, ttype)
+                text = token and token.getText() or ''
                 current.addChild(AstNode('token', text, id_))
 
             else:
@@ -160,15 +159,6 @@ class Parser(object):
                 if token:
                     self._tokenBuffer.append(token)
  
-    def _getMatchedText(self, token, matchedType):
-
-        if not token:
-            return ''        
-
-        tmp = matchedType.createToken(token.getText())
-        
-        return tmp  and tmp.getText() or ''
-    
     def _gotoNextSibling(self, path):
             
         if path.getLength() < 2:
