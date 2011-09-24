@@ -93,11 +93,16 @@ class Word(TokenType):
     
 class Prefix(TokenType):
     
-    def __init__(self, tokenText):
+    def __init__(self, tokenText, escape=True):
         
         TokenType.__init__(self)
         
-        regexStr = r"\A(%s)(\S+)\Z" % self._escape(tokenText)
+        if escape:
+            tmp = self._escape(tokenText)
+        else:
+            tmp = tokenText
+        
+        regexStr = r"\A(%s)(\S+)\Z" % tmp 
         self._regex = re.compile(regexStr)
         self._len = len(tokenText)
     
@@ -121,11 +126,16 @@ class Prefix(TokenType):
 
 class Postfix(TokenType):
     
-    def __init__(self, tokenText):
+    def __init__(self, tokenText, escape=True):
         
         TokenType.__init__(self)
+
+        if escape:
+            tmp = self._escape(tokenText)
+        else:
+            tmp = tokenText
         
-        regexStr = r"\A(\S+)(%s)\Z" % self._escape(tokenText)
+        regexStr = r"\A(\S+)(%s)\Z" % tmp
         self._regex = re.compile(regexStr)
         self._len = len(tokenText)
     
@@ -149,11 +159,24 @@ class Postfix(TokenType):
    
 class Separator(TokenType):
     
-    def __init__(self, tokenText, whitespaceAllowed=True):
+    @staticmethod
+    def create(pattern):
+        
+        res = Separator('')
+        res._regex = re.compile(pattern)
+        res._len = len(pattern)
+        
+        return res
+                   
+    def __init__(self, tokenText, whitespaceAllowed=True, escape=True):
         
         TokenType.__init__(self)
         
-        tmp = self._escape(tokenText)
+        if escape:
+            tmp = self._escape(tokenText)
+        else:
+            tmp = tokenText
+        
         if whitespaceAllowed:
             regexStr = r"\A(.*)(" + tmp + ")(.*)\Z"
         else:
