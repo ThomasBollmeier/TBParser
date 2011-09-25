@@ -109,6 +109,39 @@ class Keyword(TokenType):
             return Token(text, [self])
         else:
             return None
+        
+class Literal(TokenType):
+    
+    DELIMITERS = ['\'', '\"']
+    
+    _single = None
+    
+    @staticmethod
+    def get():
+        
+        if not Literal._single:
+            Literal._single = Literal()
+            
+        return Literal._single
+    
+    def __init__(self):
+        
+        TokenType.__init__(self)
+        
+    def createToken(self, text):
+        
+        if self.isLiteral(text):
+            return Token(text, [self])
+        else:
+            return None
+        
+    def isLiteral(self, text):
+        
+        if len(text) >= 2:
+            first = text[0]
+            return (first in Literal.DELIMITERS) and (text[-1] == first)
+        else:
+            return False
     
 class Prefix(TokenType):
     

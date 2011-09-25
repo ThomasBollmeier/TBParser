@@ -17,7 +17,7 @@
 
 import re
 from tbparser.token import Token, TokenType, Keyword, \
-Word, Prefix, Postfix, Separator
+Word, Prefix, Postfix, Separator, Literal
 from tbparser.input_buffer import InputBuffer
 
 class Lexer(object):
@@ -31,6 +31,9 @@ class Lexer(object):
         self._prefixes = []
         self._postfixes = []
         self._separators = []
+        self._literal = None
+        self._literalDelims = []
+        self._currentLitDelim = ''
         self._wsCharCodes = [
                              WSCharCode.TAB,
                              WSCharCode.LINEBREAK,
@@ -38,10 +41,7 @@ class Lexer(object):
                              WSCharCode.FORMFEED,
                              WSCharCode.SPACE
                              ]
-        self._literalDelims = ['\'', '\"']
-        self._currentLitDelim = ''
         self._mode = LexerMode.NORMAL
-
         self._lineCommentEnabled = False
         self._lineCommentStart = ''
         self._blockCommentEnabled = False
@@ -74,6 +74,9 @@ class Lexer(object):
         elif isinstance(tt, Separator):
             self._separators.append(tt)
             self._separators.sort(cmp=TokenType.compare)
+        elif isinstance(tt, Literal):
+            self._literal = tt
+            self._literalDelims = tt.DELIMITERS
         else:
             raise Exception('Unknown token type')
 
@@ -184,6 +187,12 @@ class Lexer(object):
             return [keyword.createToken(text)]
         except KeyError:
             pass
+        
+        # Handle literals:
+        if self._literal:
+            token = self._literal.createToken(text)
+            if token:
+                return [token]
         
         res = []
 
