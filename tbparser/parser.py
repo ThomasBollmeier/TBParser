@@ -17,6 +17,7 @@
 
 from tbparser.lexer import Lexer
 from tbparser.instream import FileInput, StringInput
+from tbparser.token import Keyword
 
 class Parser(object):
 
@@ -143,19 +144,29 @@ class Parser(object):
 
     def _findNextSibling(self, path):
         
-        newPath = path.copy()
+        removed = []
         
         while True:
 
-            if newPath.getLength() < 2:
+            if path.getLength() < 2:
+                # Ursprünglichen Pfad wiederherstellen:
+                while removed:
+                    elem = removed.pop()
+                    token = elem.getToken()
+                    if token:
+                        self._tokenBuffer.pop()
+                    path.push(elem.getGrammarNode(), token)
+                
                 return False, path
 
-            siblingFound, newPath = self._gotoNextSibling(newPath)
+            siblingFound, path = self._gotoNextSibling(path)
             
             if siblingFound:
-                return True, newPath
+                return True, path
             else:
-                token = newPath.popToken()
+                elem = path.pop()
+                token = elem.getToken()
+                removed.append(elem)
                 if token:
                     self._tokenBuffer.append(token)
  
@@ -164,14 +175,12 @@ class Parser(object):
         if path.getLength() < 2:
             return False, path
 
-        elem = path.getElement(-1)
+        elem = path.pop()
         start = elem.getGrammarNode()
         token = elem.getToken()
 
-        newPath = path.copy()
-        newPath.pop()
-        prev = newPath.getElement(-1).getGrammarNode()
-        context = Context(newPath)
+        prev = path.getElement(-1).getGrammarNode()
+        context = Context(path, token)
 
         successors = prev.getSuccessors(context)
         try:
@@ -180,11 +189,13 @@ class Parser(object):
                 sibling = successors[idx+1]
                 if token:
                     self._tokenBuffer.append(token)
-                newPath.push(sibling, None)
-                return True, newPath
+                path.push(sibling, None)
+                return True, path
             else:
+                path.push(start, token)
                 return False, path
         except ValueError:
+            path.push(start, token)
             return False, path
 
     def _getNextToken(self):
@@ -214,16 +225,17 @@ class Parser(object):
             else:
                 return False, path
 
-        successors = startNode.getSuccessors(Context(path))
+        successors = startNode.getSuccessors(Context(path, token))
 
         for succ in successors:
             
-            tmpPath = path.copy()
-            tmpPath.push(succ, None)
+            path.push(succ, None)
 
-            found, newPath = self._findNextMatchingNode(token, tmpPath);
+            found, path = self._findNextMatchingNode(token, path);
             if found:
-                return found, newPath
+                return found, path
+            else:
+                path.pop()
     
         return False, path
     
@@ -240,12 +252,13 @@ class Parser(object):
             if succ.isTokenNode():
                 continue
 
-            tmpPath = path.copy()
-            tmpPath.push(succ, None)
+            path.push(succ, None)
 
-            found, newPath = self._findPathToEnd(tmpPath);
+            found, path = self._findPathToEnd(path);
             if found:
-                return found, newPath
+                return found, path
+            else:
+                path.pop()
     
         return False, path
 
@@ -330,10 +343,11 @@ class Path(object):
     
 class Context(object):
 
-    def __init__(self, path):
+    def __init__(self, path, token=None):
 
         size = path.getLength()
         self._stack = []
+        self._token = token
         
         for i in range(size):
             
@@ -353,6 +367,17 @@ class Context(object):
             iScope -= 1
             
         return None
+    
+    def getCurKeyword(self):
+        
+        if not self._token:
+            return None
+        
+        tokenTypes = self._token.getTypes()
+        if len(tokenTypes) == 1 and isinstance(tokenTypes[0], Keyword):
+            return tokenTypes[0]
+        else:
+            return None
     
 class AstNode(object):
 

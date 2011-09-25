@@ -192,7 +192,32 @@ def sequence(*elements):
 def fork(*branches):
     
     return Fork(branches)
+    
+class Switch(Connectable, Pluggable, GrammarElement):
 
+    def __init__(self, branches):
+        
+        Connectable.__init__(self)
+        Pluggable.__init__(self)
+        GrammarElement.__init__(self)
+
+        self._end = connector()
+        self._start = _SwitchNode(branches, self._end)
+        
+    def getSocket(self):
+
+        return self._start
+
+    def getPlug(self):
+
+        return self._end
+    
+    def connect(self, successorElement):
+    
+        self._end.connectTo(successorElement.getSocket())
+        
+        return successorElement
+    
 # ===== Interne Objekte: =====
 
 class _CustomRule(Rule):
@@ -372,6 +397,29 @@ class TokenNode(PlugNode, IdNode):
     def getId(self):
         
         return self._id
+    
+class _SwitchNode(Node):
+    
+    def __init__(self, branches, end):
+        
+        Node.__init__(self, Node.TECHNICAL)
+        
+        self._branches = branches
+        self._end = end
+        
+    def getSuccessors(self, context):
+        
+        keyword = context.getCurKeyword()
+        if not keyword:
+            return []
+            
+        try:
+            branch = self._branches[keyword]
+            start = connector()
+            start.connect(branch).connect(self._end)
+            return [start]
+        except KeyError:
+            return []
 
 class RuleInternalAccess(object):
     

@@ -30,7 +30,11 @@ class Token(object):
     
     def getTypeIds(self):
         
-        return [type_.getId() for type_ in self._types]    
+        return [type_.getId() for type_ in self._types]
+        
+    def getTypes(self):
+        
+        return self._types
         
 class TokenType(object):
     
