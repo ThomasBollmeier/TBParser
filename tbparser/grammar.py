@@ -119,6 +119,30 @@ class Rule(Connectable, Pluggable, GrammarElement):
         self._end.connectTo(successorElement.getSocket())
         
         return successorElement
+    
+def defineRule(name):
+    
+    return _RuleFactory(name)
+        
+class expand(object):
+    
+    def __init__(self, ruleFactory):
+        
+        self._ruleFactory = ruleFactory
+        
+    def __call__(self, expandFunc):
+        
+        self._ruleFactory._expandFunc = expandFunc
+
+class transform(object):
+    
+    def __init__(self, ruleFactory):
+        
+        self._ruleFactory = ruleFactory
+        
+    def __call__(self, transformFunc):
+        
+        self._ruleFactory._transformFunc = transformFunc
 
 class Grammar(Rule):
 
@@ -170,7 +194,45 @@ def fork(*branches):
     return Fork(branches)
 
 # ===== Interne Objekte: =====
+
+class _CustomRule(Rule):
     
+    def __init__(self, name, ident, expandFunc, transformFunc):
+        
+        Rule.__init__(self, name, ident)
+        
+        self._expandFunc = expandFunc
+        self._transformFunc = transformFunc
+        
+    def expand(self, start, end, context):
+        
+        self._expandFunc(start, end, context)
+        
+    def transform(self, astNode):
+        
+        if self._transformFunc:
+            return self._transformFunc(astNode)
+        else:
+            return astNode
+    
+class _RuleFactory(object):
+    
+    def __init__(self, name):
+        
+        self._name = name
+        self._expandFunc = None
+        self._transformFunc = None
+        
+    def __call__(self, ident=''):
+        
+        return _CustomRule(self._name, ident, self._expandFunc, self._transformFunc)
+        
+    def getName(self):
+        
+        return self._name
+    
+    name = property(getName)
+
 class IdNode(object):
     
     def __init__(self):
