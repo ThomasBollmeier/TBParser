@@ -90,6 +90,25 @@ class Word(TokenType):
     def matches(self, text):
         
         return bool(self._regex.match(text))
+        
+class Keyword(TokenType):
+    
+    def __init__(self, keyword):
+        
+        TokenType.__init__(self)
+        
+        self._keyword = keyword
+        
+    def getKeyword(self):
+        
+        return self._keyword
+    
+    def createToken(self, text):
+        
+        if text == self._keyword:
+            return Token(text, [self])
+        else:
+            return None
     
 class Prefix(TokenType):
     

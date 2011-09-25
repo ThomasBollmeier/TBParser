@@ -16,7 +16,8 @@
 # along with TBParser.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
-from tbparser.token import Token, TokenType, Word, Prefix, Postfix, Separator
+from tbparser.token import Token, TokenType, Keyword, \
+Word, Prefix, Postfix, Separator
 from tbparser.input_buffer import InputBuffer
 
 class Lexer(object):
@@ -25,6 +26,7 @@ class Lexer(object):
         
         self._instream = None
         self._stack = []
+        self._keywords = {}
         self._words = []
         self._prefixes = []
         self._postfixes = []
@@ -59,7 +61,9 @@ class Lexer(object):
 
     def addTokenType(self, tt):
         
-        if isinstance(tt, Word):
+        if isinstance(tt, Keyword):
+            self._keywords[tt.getKeyword()] = tt
+        elif isinstance(tt, Word):
             self._words.append(tt)
         elif isinstance(tt, Prefix):
             self._prefixes.append(tt)
@@ -174,6 +178,13 @@ class Lexer(object):
   
     def _getTokens(self, text):
 
+        # First lookup keywords:
+        try:
+            keyword = self._keywords[text]
+            return [keyword.createToken(text)]
+        except KeyError:
+            pass
+        
         res = []
 
         # Find separators and split:

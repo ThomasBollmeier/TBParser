@@ -164,6 +164,10 @@ def oneToMany(element):
 def sequence(*elements):
 
     return Sequence(elements)
+    
+def fork(*branches):
+    
+    return Fork(branches)
 
 # ===== Interne Objekte: =====
     
@@ -390,6 +394,34 @@ class Sequence(Connectable, Pluggable, GrammarElement):
             connect(current, elem)
             current = elem
         connect(current, self._end)
+
+    def getSocket(self):
+
+        return self._start
+
+    def getPlug(self):
+
+        return self._end
+    
+    def connect(self, successorElement):
+    
+        self._end.connectTo(successorElement.getSocket())
+        
+        return successorElement
+
+class Fork(Connectable, Pluggable, GrammarElement):
+
+    def __init__(self, branches):
+        
+        Connectable.__init__(self)
+        Pluggable.__init__(self)
+        GrammarElement.__init__(self)
+
+        self._start = connector()
+        self._end = connector()
+
+        for branch in branches:
+            self._start.connect(branch).connect(self._end)
 
     def getSocket(self):
 
