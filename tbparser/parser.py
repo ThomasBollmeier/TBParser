@@ -286,27 +286,30 @@ class Path(object):
     def __init__(self):
 
         self._elements = []
-
-    def copy(self):
-
-        clone = Path()
-        
-        for elem in self._elements:
-            clone.push(elem.getGrammarNode(), elem.getToken())
-
-        return clone
+        self._envStack = [] # Stack der Umgebungen
 
     def push(self, grammarNode, token):
         
         self._elements.append(PathElement(grammarNode, token))
+        
+        if grammarNode.isRuleStart():
+            self._envStack.append(grammarNode.getEnvVars())
+        elif grammarNode.isRuleEnd():
+            self._envStack.append(False)
 
     def pop(self):
 
-        return self._elements.pop()
+        res = self._elements.pop()
+        
+        node = res.getGrammarNode()
+        if node.isRuleStart() or node.isRuleEnd():
+            self._envStack.pop()
+                
+        return res;
 
     def popToken(self):
 
-        element = self._elements.pop()
+        element = self.pop()
 
         return element.getToken()
 
@@ -325,6 +328,24 @@ class Path(object):
             raise Exception('Invalid path element index')
         
         return self._elements[index]
+        
+    def getEnvVar(self, name):
+        
+        envVarStack = []
+        
+        for env in self._envStack:
+            if not isinstance(env, bool):
+                envVarStack.append(env)
+            else:
+                envVarStack.pop()
+
+        idx = len(envVarStack) - 1
+        while (idx > -1):
+            if name in envVarStack[idx]:
+                return envVarStack[idx]
+            idx -= 1
+            
+        return None
 
     def toString(self):
 
@@ -345,28 +366,16 @@ class Context(object):
 
     def __init__(self, path, token=None):
 
-        size = path.getLength()
-        self._stack = []
+        self._path = path
         self._token = token
+                           
+    def setToken(self, token):
         
-        for i in range(size):
-            
-            node = path.getElement(i).getGrammarNode()
-
-            if node.isRuleStart():
-                self._stack.append(node.getEnvVars())
-            elif node.isRuleEnd():
-                self._stack.pop()
+        self._token = token
 
     def getEnvVar(self, name):
-
-        iScope = len(self._stack) - 1
-        while (iScope):
-            if name in self._stack[iScope]:
-                return self._stack[iScope]
-            iScope -= 1
-            
-        return None
+        
+        return self._path.getEnvVar(name)
     
     def getCurKeyword(self):
         
@@ -378,7 +387,7 @@ class Context(object):
             return tokenTypes[0]
         else:
             return None
-    
+     
 class AstNode(object):
 
     def __init__(self, name='', text='', identifier=''):

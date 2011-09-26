@@ -1,2 +1,2 @@
 PACKAGE = 'tbparser'
-PACKAGE_VERSION = '1.0.8'
+PACKAGE_VERSION = '1.0.9'
