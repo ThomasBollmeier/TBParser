@@ -347,7 +347,7 @@ class Path(object):
             
         return None
 
-    def toString(self):
+    def __repr__(self):
 
         res = ""
 
@@ -360,6 +360,17 @@ class Path(object):
                     res += "."
                 res += text
 
+        return res
+    
+    def __str__(self):
+        
+        res = ''
+        for elem in self._elements:
+            node = elem.getGrammarNode()
+            if res:
+                res += ':'
+            res += "%d" % node.getTechnicalId()
+            
         return res
     
 class Context(object):

@@ -273,6 +273,8 @@ class Node(Connectable, Socket):
     RULE_END = 2
     TOKEN = 3
     TECHNICAL = 4
+    
+    __nextTechId = 1
 
     def __init__(self, category, tokenType = None):
                 
@@ -281,7 +283,10 @@ class Node(Connectable, Socket):
 
         self._catg = category
         self._tokenType = tokenType
-
+        
+        self.__techId = Node.__nextTechId
+        Node.__nextTechId += 1
+        
     def getTokenType(self):
 
         return self._tokenType
@@ -309,6 +314,10 @@ class Node(Connectable, Socket):
     def getSocket(self):
 
         return self
+    
+    def getTechnicalId(self):
+        
+        return self.__techId
 
 class PlugNode(Node, Pluggable, Plug, GrammarElement):
 
@@ -331,7 +340,8 @@ class PlugNode(Node, Pluggable, Plug, GrammarElement):
 
     def connectTo(self, socket):
         
-        self._successors.append(socket)
+        if not socket in self._successors:
+            self._successors.append(socket)
     
     def connect(self, successorElement):
         
