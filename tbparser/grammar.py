@@ -102,7 +102,7 @@ class Rule(Connectable, Pluggable, GrammarElement):
 
         return self._envVars
 
-    def setEnvVar(self, name, value):
+    def setEnvVar(self, name, value=True):
 
         self._envVars[name] = value
 
