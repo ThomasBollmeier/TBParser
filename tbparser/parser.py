@@ -422,6 +422,12 @@ class AstNode(object):
         self._children.append(child)
         child._parent = self
         
+    def removeChildren(self):
+        
+        for child in self._children:
+            child._parent = None
+        self._children = []
+        
     def replaceChild(self, old, new):
 
         idx = self._children.index(old)
