@@ -444,6 +444,10 @@ class AstNode(object):
     def getText(self):
             
         return self._text
+    
+    def getParent(self):
+        
+        return self._parent
             
     def getChildren(self):
 
