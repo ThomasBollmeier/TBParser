@@ -211,13 +211,13 @@ class Parser(object):
             return None
 
     def _findNextMatchingNode(self, token, path):
-
+        
         elem = path.getElement(-1)
         startNode = elem.getGrammarNode()
         startToken = elem.getToken()
-
+        
         if startNode.isTokenNode() and startToken is None:
-
+            
             if startNode.getTokenTypeId() in token.getTypeIds():
                 path.pop()
                 path.push(startNode, token)
@@ -393,11 +393,11 @@ class Context(object):
         if not self._token:
             return None
         
-        tokenTypes = self._token.getTypes()
-        if len(tokenTypes) == 1 and isinstance(tokenTypes[0], Keyword):
-            return tokenTypes[0]
-        else:
-            return None
+        for tokenType in self._token.getTypes():
+            if isinstance(tokenType, Keyword):
+                return tokenType
+        
+        return None
      
 class AstNode(object):
 

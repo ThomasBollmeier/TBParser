@@ -181,13 +181,6 @@ class Lexer(object):
   
     def _getTokens(self, text):
 
-        # First lookup keywords:
-        try:
-            keyword = self._keywords[text]
-            return [keyword.createToken(text)]
-        except KeyError:
-            pass
-        
         # Handle literals:
         if self._literal:
             token = self._literal.createToken(text)
@@ -245,16 +238,20 @@ class Lexer(object):
 
                 return res 
 
-        # Find words:
+        # Find (key)words:
         
-        matchingWords = [word for word in self._words if word.matches(text)]
+        try:
+            matchingWords = [self._keywords[text]]
+        except KeyError:
+            matchingWords = []
+        
+        matchingWords += [word for word in self._words if word.matches(text)]
 
         if matchingWords:
             res.append(Token(text, matchingWords))
             return res
         
         raise Exception("Unknown token '%s'" % text)
-    
     
     def _handleComsumption(self, consumed):
         
