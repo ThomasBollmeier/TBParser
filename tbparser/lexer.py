@@ -16,6 +16,7 @@
 # along with TBParser.  If not, see <http://www.gnu.org/licenses/>.
 
 import re
+import functools
 from tbparser.token import Token, TokenType, Keyword, \
 Word, Prefix, Postfix, Separator, Literal
 from tbparser.input_buffer import InputBuffer
@@ -67,13 +68,13 @@ class Lexer(object):
             self._words.append(tt)
         elif isinstance(tt, Prefix):
             self._prefixes.append(tt)
-            self._prefixes.sort(cmp=TokenType.compare)
+            self._prefixes.sort(key=functools.cmp_to_key(TokenType.compare))
         elif isinstance(tt, Postfix):
             self._postfixes.append(tt)
-            self._postfixes.sort(cmp=TokenType.compare)
+            self._postfixes.sort(key=functools.cmp_to_key(TokenType.compare))
         elif isinstance(tt, Separator):
             self._separators.append(tt)
-            self._separators.sort(cmp=TokenType.compare)
+            self._separators.sort(key=functools.cmp_to_key(TokenType.compare))
         elif isinstance(tt, Literal):
             self._literal = tt
             self._literalDelims = tt.DELIMITERS
