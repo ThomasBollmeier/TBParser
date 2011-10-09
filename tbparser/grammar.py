@@ -218,6 +218,35 @@ class Switch(Connectable, Pluggable, GrammarElement):
         
         return successorElement
     
+class Condition(Connectable, Pluggable, GrammarElement):
+    
+    def __init__(self, conditionFunc):
+        
+        Connectable.__init__(self)
+        Pluggable.__init__(self)
+        GrammarElement.__init__(self)
+
+        self._end = connector()
+        self._start = _ConditionalNode(conditionFunc, self._end)
+        
+    def getSocket(self):
+
+        return self._start
+
+    def getPlug(self):
+
+        return self._end
+    
+    def connect(self, successorElement):
+    
+        self._end.connectTo(successorElement.getSocket())
+        
+        return successorElement
+    
+class SuccessorError(Exception):
+    
+    pass
+    
 # ===== Interne Objekte: =====
 
 class _CustomRule(Rule):
@@ -403,10 +432,32 @@ class TokenNode(PlugNode, IdNode):
         IdNode.__init__(self)
         
         self._id = identifier
+        self._envVarChangeFunc = None
+        self._envVarUndoFunc = None
                 
     def getId(self):
         
         return self._id
+    
+    def setEnvChange(self, changeFunc, undoFunc):
+        
+        self._envVarChangeFunc = changeFunc
+        self._envVarUndoFunc = undoFunc
+    
+    def changesEnv(self):
+        
+        return ( self._envVarChangeFunc is not None ) and \
+          ( self._envVarUndoFunc is not None )
+        
+    def changeEnv(self, envVars, token):
+        
+        if self._envVarChangeFunc:
+            self._envVarChangeFunc(envVars, token, self)
+    
+    def undoEnvChange(self, envVars, token):
+        
+        if self._envVarUndoFunc:
+            self._envVarUndoFunc(envVars, token, self)
     
 class _SwitchNode(Node):
     
@@ -430,6 +481,22 @@ class _SwitchNode(Node):
             return [start]
         except KeyError:
             return []
+            
+class _ConditionalNode(Node):
+    
+    def __init__(self, conditionFunc, end):
+
+        Node.__init__(self, Node.TECHNICAL)
+        
+        self._conditionFunc = conditionFunc
+        self._end = end
+        
+    def getSuccessors(self, context):
+        
+        if self._conditionFunc(context):
+            return [self._end]
+        else:
+            raise SuccessorError
 
 class RuleInternalAccess(object):
     

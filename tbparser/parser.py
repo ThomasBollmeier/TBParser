@@ -18,6 +18,7 @@
 from tbparser.lexer import Lexer
 from tbparser.instream import FileInput, StringInput
 from tbparser.token import Keyword
+from tbparser.grammar import SuccessorError
 
 class Parser(object):
 
@@ -182,7 +183,12 @@ class Parser(object):
         prev = path.getElement(-1).getGrammarNode()
         context = Context(path, token)
 
-        successors = prev.getSuccessors(context)
+        try:
+            successors = prev.getSuccessors(context)
+        except SuccessorError:
+            path.push(start, token)
+            return False, path
+        
         try:
             idx = successors.index(start)
             if idx < len(successors) - 1:
@@ -225,7 +231,10 @@ class Parser(object):
             else:
                 return False, path
 
-        successors = startNode.getSuccessors(Context(path, token))
+        try:
+            successors = startNode.getSuccessors(Context(path, token))
+        except SuccessorError:
+            return False, path
 
         for succ in successors:
             
@@ -242,7 +251,10 @@ class Parser(object):
     def _findPathToEnd(self, path):
 
         node = path.getElement(-1).getGrammarNode()
-        successors = node.getSuccessors(Context(path));
+        try:
+            successors = node.getSuccessors(Context(path))
+        except SuccessorError:
+            return False, path
 
         if not successors:
             return True, path # Fertig!
@@ -296,6 +308,10 @@ class Path(object):
             self._envStack.append(grammarNode.getEnvVars())
         elif grammarNode.isRuleEnd():
             self._envStack.append(False)
+        elif grammarNode.isTokenNode() and grammarNode.changesEnv():
+            envVars = self._getCurEnvVars()
+            if envVars is not None:
+                grammarNode.changeEnv(envVars, token)
 
     def pop(self):
 
@@ -304,6 +320,10 @@ class Path(object):
         node = res.getGrammarNode()
         if node.isRuleStart() or node.isRuleEnd():
             self._envStack.pop()
+        elif node.isTokenNode() and node.changesEnv():
+            envVars = self._getCurEnvVars()
+            if envVars is not None:
+                node.changeEnv(envVars, res.getToken())
                 
         return res;
 
@@ -342,9 +362,25 @@ class Path(object):
         idx = len(envVarStack) - 1
         while (idx > -1):
             if name in envVarStack[idx]:
-                return envVarStack[idx]
+                return envVarStack[idx][name]
             idx -= 1
             
+        return None
+    
+    def _getCurEnvVars(self):
+        
+        idx = len(self._envStack) - 1
+        level = 0
+        while (idx >= 0):
+            envVars = self._envStack[idx]
+            if not isinstance(envVars, bool):
+                if level == 0:
+                    return envVars
+                level += 1
+            else:
+                level -= 1
+            idx -= 1
+        
         return None
 
     def __repr__(self):
@@ -383,6 +419,12 @@ class Context(object):
     def setToken(self, token):
         
         self._token = token
+        
+    def getToken(self):
+        
+        return self._token
+    
+    token = property(getToken)
 
     def getEnvVar(self, name):
         
