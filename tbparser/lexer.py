@@ -243,7 +243,15 @@ class Lexer(object):
         try:
             matchingWords = [self._keywords[text]]
         except KeyError:
-            matchingWords = []
+            # maybe case insensitive keyword?
+            try:
+                kw = self._keywords[text.upper()]
+                if not kw.isCaseSensitive():
+                    matchingWords = [kw]
+                else:
+                    matchingWords = []
+            except KeyError:
+                matchingWords = []
         
         matchingWords += [word for word in self._words if word.matches(text)]
 

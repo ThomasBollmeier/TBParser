@@ -97,15 +97,23 @@ class Word(TokenType):
         
 class Keyword(TokenType):
     
-    def __init__(self, keyword):
+    def __init__(self, keyword, caseSensitive=True):
         
         TokenType.__init__(self)
         
-        self._keyword = keyword
-        
+        self._caseSensitive = caseSensitive                
+        if self._caseSensitive:        
+            self._keyword = keyword
+        else:
+            self._keyword = keyword.upper()
+                
     def getKeyword(self):
         
         return self._keyword
+    
+    def isCaseSensitive(self):
+        
+        return self._caseSensitive
     
     def createToken(self, text):
         
