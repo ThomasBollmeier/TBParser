@@ -366,7 +366,7 @@ class Path(object):
             idx -= 1
             
         return None
-    
+ 
     def _getCurEnvVars(self):
         
         idx = len(self._envStack) - 1
@@ -429,6 +429,10 @@ class Context(object):
     def getEnvVar(self, name):
         
         return self._path.getEnvVar(name)
+        
+    def __getitem__(self, name):
+        
+        return self.getEnvVar(name)
     
     def getCurKeyword(self):
         
