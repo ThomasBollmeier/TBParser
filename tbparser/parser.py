@@ -82,8 +82,10 @@ class Parser(object):
             return self._createAst(path)
         else:
             if self._tokenBuffer:
-                text = self._tokenBuffer[0].getText()
-                raise Exception("Unexpected token '%s'" % text)
+                token = self._tokenBuffer[0] 
+                text = token.getText()
+                line, column = token.getStartPosition()
+                raise ParseError(line, column, text)
             else:
                 raise Exception("Parsing error")
 
@@ -534,3 +536,16 @@ class AstNode(object):
     def hasChildren(self):
 
         return bool(self._children)
+
+class ParseError(Exception):
+    
+    def __init__(self, line, column, tokenText):
+        
+        self.line = line
+        self.column = column
+        self.tokenText = tokenText
+        
+    def __str__(self):
+        
+        return "Line:%d, Column:%d -> Unexpected token '%s'" \
+            % (self.line, self.column, self.tokenText)

@@ -23,6 +23,8 @@ class Token(object):
         
         self._text = text
         self._types = types
+        self._line = 0
+        self._column = 0
         
     def getText(self):
         
@@ -35,6 +37,15 @@ class Token(object):
     def getTypes(self):
         
         return self._types
+    
+    def setStartPosition(self, line, column):
+        
+        self._line = line
+        self._column = column
+        
+    def getStartPosition(self):
+        
+        return self._line, self._column
         
 class TokenType(object):
     

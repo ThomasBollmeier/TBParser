@@ -47,6 +47,9 @@ class Lexer(object):
         self._blockCommentEnabled = False
         self._blockCommentStart = ''
         self._blockCommentEnd = ''
+        
+        self._line = 1
+        self._column = 0
 
     def setInputStream(self, instream):
 
@@ -58,6 +61,8 @@ class Lexer(object):
         self._stack = []
         self._inputBuffer = None
         self._mode = LexerMode.NORMAL
+        self._line = 1
+        self._column = 0
 
     def addTokenType(self, tt):
         
@@ -102,6 +107,8 @@ class Lexer(object):
             return self._stack.pop()
         
         consumed = ""
+        startLine = 0
+        startColumn = 0
         
         if not self._inputBuffer:
             self._inputBuffer = InputBuffer(self._instream, fillSize=1)
@@ -112,20 +119,26 @@ class Lexer(object):
                         
             if not content:
                 break
-            
+                        
             if not self._isTerminationString(content):
                 
                 ch = self._inputBuffer.consumeChar()
+                curStartPos = self._updatePosInfo(ch)
+                
                 if self._mode == LexerMode.NORMAL:
+                    if not consumed:
+                        startLine = curStartPos[0]
+                        startColumn = curStartPos[1]
                     consumed += ch
                 
             else:
 
-                self._inputBuffer.consumeAll()
+                chars = self._inputBuffer.consumeAll()
+                self._updatePosInfo(chars)
                 
                 if self._mode == LexerMode.NORMAL:
                     
-                    res = self._handleComsumption(consumed)
+                    res = self._handleComsumption(consumed, startLine, startColumn)
                     if res:
                         return res
                     else:
@@ -136,9 +149,25 @@ class Lexer(object):
                     self._checkForModeChange(content)
                 
         if consumed:
-            return self._handleComsumption(consumed)
+            return self._handleComsumption(consumed, startLine, startColumn)
         else:
             return None
+        
+    def _updatePosInfo(self, content):
+        
+        for i in range(len(content)):
+            
+            ch = content[i]
+            if not ord(ch) == WSCharCode.LINEBREAK:
+                self._column += 1
+            else:
+                self._line += 1
+                self._column = 0
+                
+            if i == 0:
+                res = (self._line, self._column)
+            
+        return res
         
     def _checkForModeChange(self,consumed):
         
@@ -179,12 +208,13 @@ class Lexer(object):
         
         return res
   
-    def _getTokens(self, text):
+    def _getTokens(self, text, startLine, startColumn):
 
         # Handle literals:
         if self._literal:
             token = self._literal.createToken(text)
             if token:
+                token.setStartPosition(startLine, startColumn)
                 return [token]
         
         res = []
@@ -197,14 +227,18 @@ class Lexer(object):
             if token:
                 # Reihenfolge wg. POP-Logik vertauschen...
                 right = sep.getRemainingRight(text)
+                left = sep.getRemainingLeft(text)
+                
                 if right:
-                    res = self._getTokens(right)
+                    col = startColumn + len(left) + len(token.getText())
+                    res = self._getTokens(right, startLine, col)
+                    
+                token.setStartPosition(startLine, startColumn + len(left))
 
                 res.append(token)
-
-                left = sep.getRemainingLeft(text)
+                
                 if left:
-                    res += self._getTokens(left)
+                    res += self._getTokens(left, startLine, startColumn)
 
                 return res
 
@@ -217,7 +251,10 @@ class Lexer(object):
 
                 right = prefix.getRemainingRight(text)
                 if right:
-                    res = self._getTokens(right)
+                    col = startColumn + len(token.getText())
+                    res = self._getTokens(right, startLine, col)
+                    
+                token.setStartPosition(startLine, startColumn)
 
                 res.append(token)
 
@@ -229,12 +266,16 @@ class Lexer(object):
             token = postfix.createToken(text)
 
             if token:
+                
+                left = postfix.getRemainingLeft(text)
+                
+                col = startColumn + len(left)
+                token.setStartPosition(startLine, col)
 
                 res.append(token)
 
-                left = postfix.getRemainingLeft(text)
                 if left:
-                    res += self._getTokens(left)
+                    res += self._getTokens(left, startLine, startColumn)
 
                 return res 
 
@@ -256,21 +297,24 @@ class Lexer(object):
         matchingWords += [word for word in self._words if word.matches(text)]
 
         if matchingWords:
-            res.append(Token(text, matchingWords))
+            token = Token(text, matchingWords)
+            token.setStartPosition(startLine, startColumn)
+            res.append(token)
             return res
         
-        raise Exception("Unknown token '%s'" % text)
+        raise Exception("Unknown token '%s' at line %d, column %d" % (text, startLine, startColumn))
     
-    def _handleComsumption(self, consumed):
+    def _handleComsumption(self, consumed, startLine, startColumn):
         
         consumed = self._checkForModeChange(consumed)
                 
         if consumed:
-            self._stack = self._getTokens(consumed)
+            self._stack = self._getTokens(consumed, startLine, startColumn)
             if self._stack:
                 return self._stack.pop()
             else:
-                raise Exception("Unknown token '%s'" % consumed)
+                raise Exception("Unknown token '%s' at line %d, column %d" \
+                                % (consumed, startLine, startColumn))
         
         return None
     
