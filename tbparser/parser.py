@@ -25,9 +25,12 @@ class Parser(object):
     def __init__(self, grammar):
 
         self._grammar = grammar
+        
         self._lexer = Lexer()
         for tt in self._grammar.getTokenTypes():
             self._lexer.addTokenType(tt)
+            
+        self._curFile = None
         
     def enableLineComments(self, lineCommentStart='//'):
         
@@ -85,14 +88,20 @@ class Parser(object):
                 token = self._tokenBuffer[0] 
                 text = token.getText()
                 line, column = token.getStartPosition()
-                raise ParseError(line, column, text)
+                raise ParseError(self._curFile, line, column, text)
             else:
                 raise Exception("Parsing error")
 
     def parseFile(self, filePath):
+        
+        self._curFile = filePath
 
-        return self.parse(FileInput(filePath))
+        res = self.parse(FileInput(filePath))
+        
+        self._curFile = None
 
+        return res
+    
     def parseString(self, string):
 
         return self.parse(StringInput(string))
@@ -539,13 +548,19 @@ class AstNode(object):
 
 class ParseError(Exception):
     
-    def __init__(self, line, column, tokenText):
+    def __init__(self, filePath, line, column, tokenText):
         
+        self.filePath = filePath
         self.line = line
         self.column = column
         self.tokenText = tokenText
         
     def __str__(self):
         
-        return "Line:%d, Column:%d -> Unexpected token '%s'" \
+        res = "Line:%d, Column:%d -> Unexpected token '%s'" \
             % (self.line, self.column, self.tokenText)
+        
+        if self.filePath:
+            res = 'File:"%s", ' % self.filePath + res
+            
+        return res
