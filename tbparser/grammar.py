@@ -123,7 +123,17 @@ class Rule(Connectable, Pluggable, GrammarElement):
 def defineRule(name):
     
     return _RuleFactory(name)
+    
+class initialize(object):
+    
+    def __init__(self, ruleFactory):
         
+        self._ruleFactory = ruleFactory
+        
+    def __call__(self, initFunc):
+        
+        self._ruleFactory._initFunc = initFunc
+
 class expand(object):
     
     def __init__(self, ruleFactory):
@@ -251,9 +261,18 @@ class SuccessorError(Exception):
 
 class _CustomRule(Rule):
     
-    def __init__(self, name, ident, expandFunc, transformFunc):
+    def __init__(self,
+                 name,
+                 ident,
+                 initFunc,
+                 expandFunc,
+                 transformFunc
+                 ):
         
         Rule.__init__(self, name, ident)
+        
+        if initFunc:
+            initFunc(self)
         
         self._expandFunc = expandFunc
         self._transformFunc = transformFunc
@@ -274,12 +293,18 @@ class _RuleFactory(object):
     def __init__(self, name):
         
         self._name = name
+        self._initFunc = None
         self._expandFunc = None
         self._transformFunc = None
         
     def __call__(self, ident=''):
         
-        return _CustomRule(self._name, ident, self._expandFunc, self._transformFunc)
+        return _CustomRule(self._name,
+                           ident,
+                           self._initFunc,
+                           self._expandFunc,
+                           self._transformFunc
+                           )
         
     def getName(self):
         
