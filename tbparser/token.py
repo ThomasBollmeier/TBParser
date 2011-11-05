@@ -195,7 +195,7 @@ class Prefix(TokenType):
         match = self._regex.match(text)
 
         if match:
-            return match.group(2)
+            return match.group(2) or ""
         else:
             return ""
 
@@ -228,7 +228,7 @@ class Postfix(TokenType):
         match = self._regex.match(text)
 
         if match:
-            return match.group(1)
+            return match.group(1) or ""
         else:
             return ""
    
@@ -273,7 +273,7 @@ class Separator(TokenType):
         match = self._regex.match(text)
 
         if match:
-            return match.group(1)
+            return match.group(1) or ""
         else:
             return ""
 
@@ -282,7 +282,7 @@ class Separator(TokenType):
         match = self._regex.match(text)
 
         if match:
-            return match.group(3)
+            return match.group(3) or ""
         else:
             return ""
         
