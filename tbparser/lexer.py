@@ -33,6 +33,7 @@ class Lexer(object):
         self._separators = []
         self._literal = None
         self._literalDelims = []
+        self._literalEscChar = None
         self._currentLitDelim = ''
         self._wsCharCodes = [
                              WSCharCode.TAB,
@@ -82,6 +83,7 @@ class Lexer(object):
         elif isinstance(tt, Literal):
             self._literal = tt
             self._literalDelims = tt.DELIMITERS
+            self._literalEscChar = Literal.ESCAPE_CHAR
         else:
             raise Exception('Unknown token type')
 
@@ -111,7 +113,8 @@ class Lexer(object):
         startColumn = 0
         
         if not self._inputBuffer:
-            self._inputBuffer = InputBuffer(self._instream, fillSize=1)
+            # Puffer erzeugen. Größe auf Zwei setzen, um evtl. Escape-Zeichen erkennen zu können
+            self._inputBuffer = InputBuffer(self._instream, fillSize=2) 
                 
         while True:
             
@@ -119,22 +122,19 @@ class Lexer(object):
                         
             if not content:
                 break
-                        
-            if not self._isTerminationString(content):
-                
-                ch = self._inputBuffer.consumeChar()
-                curStartPos = self._updatePosInfo(ch)
-                
-                if self._mode == LexerMode.NORMAL:
-                    if not consumed:
-                        startLine = curStartPos[0]
-                        startColumn = curStartPos[1]
-                    consumed += ch
-                
-            else:
+            
+            consumedChars, isTermination = self._consume()
+            curStartPos = self._updatePosInfo(consumedChars)
 
-                chars = self._inputBuffer.consumeAll()
-                self._updatePosInfo(chars)
+            if self._mode == LexerMode.NORMAL:
+
+                if not consumed and curStartPos:
+                    startLine = curStartPos[0]
+                    startColumn = curStartPos[1]
+
+                consumed += consumedChars
+                        
+            if isTermination:
                 
                 if self._mode == LexerMode.NORMAL:
                     
@@ -154,6 +154,8 @@ class Lexer(object):
             return None
         
     def _updatePosInfo(self, content):
+        
+        res = None
         
         for i in range(len(content)):
             
@@ -202,7 +204,7 @@ class Lexer(object):
             
             self._mode = LexerMode.NORMAL
             self._inputBuffer = InputBuffer(self._instream,
-                                            fillSize = 1 # <- Länge aller Whitespace-Zeichen
+                                            fillSize = 2 # <- Länge zwei wg. Escape-Zeichen
                                             )
             res = ""
         
@@ -318,23 +320,53 @@ class Lexer(object):
         
         return None
     
-    def _isTerminationString(self, text):
+    def _consume(self):
+
+        text = self._inputBuffer.getContent()
+        if not text:
+            raise Exception('Must not consume empty content')
         
         if self._mode == LexerMode.NORMAL:
+
+            isTermination = False
+            consumed = ''
             
-            return self._isWhiteSpace(text)
-        
+            textLen = len(text)
+            lastIdx = textLen - 1
+            prevChar = None
+            for idx in range(textLen):
+                ch = text[idx]
+                if idx != lastIdx or ch != self._literalEscChar or textLen == 1:
+                    consumedChar = self._inputBuffer.consumeChar()
+                    if prevChar is None or prevChar != self._literalEscChar:
+                        isTermination = self._isWhiteSpace(consumedChar)
+                        if isTermination:
+                            break
+                        consumed += consumedChar
+                    elif consumedChar not in self._literalDelims:
+                        consumed += consumedChar
+                    else:
+                        consumed = consumed[:-1] + consumedChar
+                else:
+                    # Escape-Zeichen an letzter Position nicht konsumieren
+                    break
+                prevChar = consumedChar
+            
         elif self._mode == LexerMode.LINE_COMMENT:
-                
-            return ord(text) == WSCharCode.LINEBREAK
-        
+            
+            isTermination = ord(text) == WSCharCode.LINEBREAK
+            consumed = self._inputBuffer.consumeAll()
+                                
         elif self._mode == LexerMode.BLOCK_COMMENT:
             
-            return text == self._blockCommentEnd
-            
+            isTermination = text == self._blockCommentEnd
+            consumed = self._inputBuffer.consumeAll()
+                        
         else:
             
             raise Exception("Undefined lexer mode")
+            
+        return consumed, isTermination
 
     def _isWhiteSpace(self, ch):
 

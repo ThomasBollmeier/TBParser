@@ -136,6 +136,7 @@ class Keyword(TokenType):
 class Literal(TokenType):
     
     DELIMITERS = ['\'', '\"']
+    ESCAPE_CHAR = '\\'
     
     _single = None
     
